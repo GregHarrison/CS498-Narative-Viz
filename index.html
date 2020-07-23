@@ -10,16 +10,16 @@
       .append("svg")
       .attr("width", width)
       .attr("height", height);
-
-    var path = d3.geoPath().projection(null);
     
-    var cal = d3.json("https://raw.githubusercontent.com/GregHarrison/CS498-Narrative-Vis/master/ca-albers.json");
+    var cal = d3.json("https://raw.githubusercontent.com/GregHarrison/CS498-Narrative-Vis/master/ca.json");
     var cal_fires = d3.csv("https://raw.githubusercontent.com/GregHarrison/CS498-Narrative-Vis/master/California_Fire_Incidents.csv");
 
     Promise.all([cal, cal_fires]).then(function(values){
       
       var projection = d3.geoConicEqualArea().parallels([34, 40.5]).rotate([120,0]).fitSize([width,height], values[0]);
-      //var projection = d3.geoMercator().translate([width/2, height/2]).scale(1000).center([-120,40]);
+      
+      var path = d3.geoPath().projection(projection);
+
       svg.append("path")
         .attr("d", path(values[0]))
         .attr("fill", "#e5e5e5")
