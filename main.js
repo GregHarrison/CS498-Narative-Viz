@@ -150,7 +150,6 @@ Promise.all([cal, cal_fires]).then(function(values) {
   function drawCirclesAnimated(year) {
     
     var yearStartDate = new Date(year,00,00,00,00,00);
-    var yearEndDate = new Date(year,11,31,23,59,59);
     var annoWidth = 250
     var annoHeight = 78
     
@@ -225,7 +224,7 @@ Promise.all([cal, cal_fires]).then(function(values) {
   /** Function will display fires on the map as circles with size reltaive to the 
       amount of acres burned. 
       @param year  The year to display data for. */
-  function drawCircles(data, year) {
+  function drawCircles(year, data = values[1].filter(d => d.ArchiveYear==year)) {
     var annoWidth = 250
     var annoHeight = 78
 
@@ -286,7 +285,7 @@ Promise.all([cal, cal_fires]).then(function(values) {
       @param year  The year to display data for. 
       @param data  The data to be used to draw the circles.
       @param transTime  The desired time to of animations in milliseconds.*/
-  function drawChart(year, data = values[1].filter(d => d.ArchiveYear==year), transTime = transitionTime) {
+  function drawChart(year, transTime = transitionTime, data = values[1].filter(d => d.ArchiveYear==year)) {
     
     var yearStartDate = new Date(year,00,01,00,00,00);
     var yearEndDate = new Date(year,11,31,23,59,59);
@@ -375,8 +374,8 @@ Promise.all([cal, cal_fires]).then(function(values) {
           acresBurnedLabel.attr("x", sliderScale(dateFromSliderPosition))
             .text("Total Burned: " + sumAcresBurned + " Acres");
 
-          drawChart(year, data, 10);
-          drawCircles(data, year);
+          drawChart(year, 10, data );
+          drawCircles(year, data);
         })
       );
   
@@ -399,17 +398,20 @@ Promise.all([cal, cal_fires]).then(function(values) {
 
     var handle = slider.insert("circle", ".track-overlay")
       .attr("class", "handle")
-      .attr("r", "8px");
+      .attr("r", "8px")
+      .attr("cx", width);
         
     var dateLabel = slider.append("text")  
       .attr("class", "sliderLabel")
       .text(fireDateParse(yearStartDate))
       .attr("transform", "translate(0,"+25+")")
+      .attr("x", width);
     
     var acresBurnedLabel = slider.append("text")  
       .attr("class", "sliderLabel")
       .text("Total Burned: " + 0 + " Acres")
       .attr("transform", "translate(0,"+(-20)+")")
+      .attr("x", width);
   }
 
 
@@ -451,12 +453,11 @@ Promise.all([cal, cal_fires]).then(function(values) {
     // Update header with current year
     d3.select("#yearText").text(year + " California Wildfires ");
 
-    drawChart(year);
-    drawCirclesAnimated(year);
+    drawChart(year, transTime = 100);
+    drawCircles(year);
 
     d3.select("#slider").selectAll("*").remove();
     appendSlider(year);
-
   }
 
 
