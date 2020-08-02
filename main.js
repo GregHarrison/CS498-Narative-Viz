@@ -337,7 +337,7 @@ Promise.all([cal, cal_fires]).then(function(values) {
   function appendSlider(year) {
     var yearStartDate = new Date(year,00,01,00,00,00);
     var yearEndDate = new Date(year,11,31,23,59,59);
-    
+    var data = values[1].filter(d => d.ArchiveYear==year);
     var sliderScale = d3.scaleTime()
       .domain([yearStartDate, yearEndDate])
       .range([0, width])
@@ -403,13 +403,13 @@ Promise.all([cal, cal_fires]).then(function(values) {
         
     var dateLabel = slider.append("text")  
       .attr("class", "sliderLabel")
-      .text(fireDateParse(yearStartDate))
+      .text(fireDateParse(yearEndDate))
       .attr("transform", "translate(0,"+25+")")
       .attr("x", width);
     
     var acresBurnedLabel = slider.append("text")  
       .attr("class", "sliderLabel")
-      .text("Total Burned: " + 0 + " Acres")
+      .text("Total Burned: " + d3.sum(data, d => d.AcresBurned) + " Acres")
       .attr("transform", "translate(0,"+(-20)+")")
       .attr("x", width);
   }
