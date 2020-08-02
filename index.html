@@ -1,236 +1,79 @@
 <html>
-<style>
+  <style>
+    .line {
+      stroke-width: 2.5px;
+      stroke-linecap: round;
+      fill: none;
+    }
 
-  .line {
-    stroke: red;
-    stroke-width: 1.5;
-    stroke-miterlimit: 1;
-    stroke-linecap: round;
-    fill: none;
-  }
+    .axis-title {
+      font-family: sans-serif;
+      font-size: 16px;
+      font-weight: bold;
+      text-anchor: middle;
+      fill: black;
+    }
 
-  circle {
-    fill: red;
-  }
+    .grid line {
+      stroke: lightgray;
+    }
 
-</style>
-<script src="https://d3js.org/d3.v5.min.js"></script>
-<script src="https://d3js.org/d3-shape.v1.min.js"></script>
-<head>
-  <title>California Wildfiires 2013 - 2019</title>
-</head>
-<body>
-  <h1 id="yearText"></h1>
-<button id="nextButton">Next</button>
-<select id="yearButton"></select>
-<div id="map"></div>
-<div id="chart"></div>
-<script>
+    .majorFireInfoText {
+      font-family: sans-serif;
+      font-size: 14px;
+      fill: black;
+    }
 
-var width = 600;
-var height = 600;
-var margin = 30;
-const transitionTime = 10000;   // The ammount of time the trasntions should last
-var currentYear = 2013;
+    .sliderLine,
+    .track-inset,
+    .track-overlay {
+      stroke-linecap: round;
+    }
 
-d3.select("#yearText").text(currentYear);
+    .sliderLine {
+      stroke: black;
+      stroke-opacity: 0.3;
+      stroke-width: 5px;
+    }
 
-// svg for map
-var map = d3.select("#map")
-  .append("svg")
-    .attr("width", width + 2*margin)
-    .attr("height", height + 2*margin);
+    .track-inset {
+      stroke-width: 8px;
+    }
 
-var cal = d3.json("https://raw.githubusercontent.com/GregHarrison/CS498-Narrative-Vis/master/ca.json");
-var cal_fires = d3.csv("https://raw.githubusercontent.com/GregHarrison/CS498-Narrative-Vis/master/Cal_Fires.csv");
+    .track-overlay {
+      stroke-width: 25px;
+      stroke: transparent;
+      cursor: pointer;
+    }
 
-Promise.all([cal, cal_fires]).then(function(values) {
-  
-  // Create time parser for dates
-  var parseTime = d3.timeParse("%Y-%m-%dT%H:%M:%SZ");
+    .handle {
+      fill: lightgray;
+      stroke: black;
+      stroke-opacity: 0.5;
+      stroke-width: 1px;
+    }
 
-  // Parse data
-  values[1].forEach(function(d) {
-    d.AcresBurned = +d.AcresBurned;
-    d.RunSumAcresBurned = +d.RunSumAcresBurned;
-    d.Started = parseTime(d.Started);
-    d.Extinguished = parseTime(d.Extinguished);
-  })
+    .sliderLabel {
+      font-family: sans-serif;
+      font-size: 14px;
+      text-anchor: middle;
+      fill: black;
+    }
 
-  // create list of years
-  var years = d3.map(values[1], function(d) { return d.ArchiveYear; }).keys()
-
-  // add the year options to the button
-  d3.select("#yearButton")
-    .selectAll("myOptions")
-      .data(years)
-    .enter()
-      .append("option")
-    .text(function(d) { return d; })
-    .attr("value", function(d) { return d; });
-
-  /*****************************
-  /* Create Map of California  *
-  /*****************************/
-  var projection = d3.geoConicEqualArea().parallels([34, 40.5]).rotate([120,0]).fitSize([width,height], values[0]);
-
-  var path = d3.geoPath().projection(projection);
-
-  map.append("g")
-    .attr("id", "caliMap")
-    .attr("transform","translate("+margin+","+margin+")")
-    .append("path")
-      .attr("d", path(values[0]))
-      .attr("fill", "#e5e5e5")
-      .attr("stroke", "black")
-      .attr("stroke-width", ".5px");
-  
-  // Create a scale to translate a year into the transition time
-  var transitionScale = d3.scaleLinear()
-    .domain([0,365])
-    .range([0,transitionTime]);
-
-  /** Function will display fires on the map as circles with size reltaive to the 
-      amount of acres burned. 
-      @param year  The year to display data for. */
-  function drawMap(year) {
-    
-    var startDate = new Date(year,00,00,00,00,00);
-    var endDate = new Date(year,11,31,23,59,59);
-
-    // Create a conversion to set the radious of circle to be
-    // proportional to the acres burned
-    var acres2radious = d3.scaleSqrt()
-    .domain([0, d3.max(values[1], function(d) { return d.AcresBurned; } )])
-    .range([1,30]);
-
-    // Create circles at latitude and longitude location of each fire.
-    // Circles spawn when fire started and last for time interval of fire
-    map.append("g")
-      .attr("id", "fireCircles")
-      .selectAll("circle")
-      .data(values[1].filter(function(d) { return d.ArchiveYear==year; }))
-      .enter()
-      .append("circle")
-        .attr("cx", function(d) { return projection([d.Longitude,d.Latitude])[0]; })
-        .attr("cy", function(d) { return projection([d.Longitude,d.Latitude])[1]; })
-      .transition()
-        .delay(function(d,i) { return transitionScale(d3.timeDay.count(startDate, d.Started)); })
-        .duration(function(d) { return transitionScale(d3.timeDay.count(d.Started, d.Extinguished)); })
-        .attr("r", function(d) { return acres2radious(d.AcresBurned); })
-        .attr("opacity", 1)
-      .transition()
-        .attr("opacity", .2);    
-  }
-
-  // Initialize map with 2013 data
-  drawMap(currentYear);
-
-  /**********************************************
-   * Create line graph of AcresBurned over time *
-   * ********************************************/
-  var chart = d3.select("#chart")
-    .append("svg")
-      .attr("width", width + 2*margin)
-      .attr("height", height/2 + 2*margin)
-      .append("g")
-        .attr("id", "lineChart")
-        .attr("transform","translate("+margin+","+margin+")");
-  
-  /** Function will create line chart showing the cumulative amount of acres burned
-      over a given year. 
-      @param year  The year to display data for. */
-  function drawLineChart(year) {
-    
-    var startDate = new Date(year,00,01,00,00,00);
-    var endDate = new Date(year,11,31,23,59,59);
-    
-    // Scale x-axis
-    var x = d3.scaleTime()
-      .domain([startDate, endDate])
-      .range([0, width]);
-    
-    // Scale y-axis
-    var y = d3.scaleLinear()
-      .domain([0, d3.max(values[1], function(d) { return d.RunSumAcresBurned; })])
-      .range([height/2, 0])
-      .nice();
-
-    // Add x axis
-    chart.append("g")
-      .attr("id", "xAxis")
-      .attr("transform", "translate("+margin+", "+height/2+")")
-      .call(d3.axisBottom(x)
-        .ticks(12)
-        .tickFormat(d3.timeFormat("%b")));
-
-    // Add y axis
-    chart.append("g")
-      .attr("id", "yAxis")
-      .attr("transform", "translate("+margin+", 0)")
-      .call(d3.axisLeft(y));
-    
-    var line = d3.line()
-      .x(function(d) { return x(d.Started); })
-      .y(function(d) { return y(d.RunSumAcresBurned); });
-
-    var path = chart.append("g")
-      .attr("id", "line")
-      .attr("transform", "translate("+margin+", 0)")
-      .append("path")
-        .datum(values[1].filter(function(d) { return d.ArchiveYear==year; }))
-        .attr("class", "line")
-        .attr("d", line);
-
-    var totalLength = path.node().getTotalLength();
-
-    path
-      .attr("stroke-dasharray", totalLength + " " + totalLength)
-      .attr("stroke-dashoffset", totalLength)
-      .transition()
-        .duration(transitionTime)
-        .attr("stroke-dashoffset", 0);
-  }
-  
-  // Initialize chart with 2013 data
-  drawLineChart(currentYear);
-
-  /** Update the page for the appropriate year.
-      @param year  The year to display data for. */
-  function updateDisplay(year) {
-
-    // Remove all circles from the map
-    d3.select("#map").select("svg").select("#fireCircles").remove();
-    
-    // Remove all elements of the chart svg
-    d3.select("#chart").select("svg").select("#lineChart").selectAll("*").remove();
-    
-    // Update header with current year
-    d3.select("#yearText").text(year);
-
-    // Draw circles for chosen year
-    drawMap(year);
-
-    // Draw line chart for chosen year
-    drawLineChart(year);
-  }
-
-  d3.select("#yearButton")
-    .on("change", function(d) {
-      var selection = d3.select(this).property("value");
-      updateDisplay(selection);
-      currentYear = selection;
-    });
-  
-  d3.select("#nextButton")
-    .on("click", function(d) {
-      var nextYear = currentYear + 1;
-      updateDisplay(nextYear);
-      currentYear = nextYear;
-    });
-
-});
-
-</script>
-</body>
+  </style>
+  <script src="https://d3js.org/d3.v5.min.js"></script>
+  <script src="https://d3js.org/d3-shape.v1.min.js"></script>
+  <head>
+    <title>California Wildfiires 2013 - 2019</title>
+  </head>
+  <body>
+    <h1 id="yearText" style="text-align:leftr"></h1>
+    <div id="filters">
+      <button id="nextButton">Next</button>
+    </div>  
+    <div id="map"></div>
+    <div id="chart"></div>
+    <div id="sliderDiv"></div>
+    <script src="main.js"></script>
+  </body>
 </html>
